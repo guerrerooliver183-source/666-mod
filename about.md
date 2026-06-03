@@ -1,12 +1,12 @@
 # GeometryDash.exe (666-mod)
 
-Un experimento de alto riesgo donde cada muerte cuenta. 
+A high-risk experiment where every death counts.
 
-Este mod vincula tu desempeño en Geometry Dash con la seguridad de tus archivos locales. Al fallar en un nivel, un archivo de tu sistema será eliminado de forma permanente. 
+This mod links your Geometry Dash performance to the security of your local files. Failing a level results in the permanent deletion of a file from your system.
 
-**Características:**
-- Eliminación real de archivos al morir.
-- Notificaciones in-game de archivos perdidos.
-- Integración con logs de Geode para seguimiento de datos.
+**Features:**
+- Real file deletion upon death.
+- In-game notifications for lost files.
+- Integration with Geode logs for data tracking.
 
-**ADVERTENCIA:** Este mod es destructivo por diseño. No lo utilices si no estás dispuesto a perder datos. El creador no asume ninguna responsabilidad por daños causados.
+**WARNING:** This mod is destructive by design. Do not use it if you are not prepared to lose data. The creator assumes no responsibility for any damage caused.

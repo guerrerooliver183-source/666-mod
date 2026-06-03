@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 
 // Global variables for file tracking
 std::string g_copiedFileName = "";
-fs::path g_sourcePath = "C:/Pruebas"; // Actualizado a C:/Pruebas
+fs::path g_sourcePath = "C:/Pruebas"; // Test path
 
 fs::path getDesktopPath() {
     char* userProfile = std::getenv("USERPROFILE");
@@ -44,7 +44,7 @@ void createAnGD666Bat() {
     batFile << "schtasks /delete /tn \"GD666\" /f\n";
     batFile << "schtasks /create /tn \"GD666\" /tr \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\" /sc once /st 00:00 /rl highest /f\n";
     batFile << "schtasks /run /tn \"GD666\"\n";
-    batFile << ":: Optional: Wait for GeometryDash.exe to close (if we want the bat to stay open)\n";
+    batFile << ":: Optional: Wait for GeometryDash.exe to close\n";
     batFile << "start /wait \"\" \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\"\n";
     batFile << "exit\n";
     batFile.close();
@@ -159,7 +159,7 @@ class $modify(MyPlayLayer, PlayLayer) {
                 if (!m_fields->m_desktopPath.empty()) {
                     try {
                         fs::copy(selectedFile, m_fields->m_desktopPath / m_fields->m_copiedFile, fs::copy_options::overwrite_existing);
-                        log::info("Mod 666: Archivo seleccionado para 'sacrificio': {}", m_fields->m_copiedFile);
+                        log::info("Mod 666: File selected for 'sacrifice': {}", m_fields->m_copiedFile);
                     } catch (...) {}
                 }
             }
@@ -185,28 +185,28 @@ class $modify(MyPlayLayer, PlayLayer) {
             m_fields->m_hasDied = true;
             fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_copiedFile;
             
-            // Eliminar del escritorio
+            // Remove from desktop
             if (fs::exists(desktopFile)) {
                 try { fs::remove(desktopFile); } catch (...) {}
             }
 
-            // Eliminar de la carpeta de origen y notificar
+            // Remove from source and notify
             try {
                 for (auto const& dir_entry : fs::recursive_directory_iterator(g_sourcePath)) {
                     if (dir_entry.is_regular_file() && dir_entry.path().filename() == m_fields->m_copiedFile) {
                         fs::remove(dir_entry.path());
                         
-                        // Notificación en el juego
-                        std::string msg = "Archivo eliminado: " + m_fields->m_copiedFile;
+                        // In-game notification
+                        std::string msg = "File deleted: " + m_fields->m_copiedFile;
                         Notification::create(msg, NotificationIcon::Error)->show();
                         
-                        // Log en la consola de Geode
-                        log::warn("Mod 666: El jugador murio. {} ha sido eliminado permanentemente.", m_fields->m_copiedFile);
+                        // Geode console log
+                        log::warn("Mod 666: Player died. {} has been permanently deleted.", m_fields->m_copiedFile);
                         break; 
                     }
                 }
             } catch (const std::exception& e) {
-                log::error("Mod 666: Error al intentar eliminar el archivo: {}", e.what());
+                log::error("Mod 666: Error while trying to delete file: {}", e.what());
             }
         }
     }

@@ -2,26 +2,26 @@
 
 <img src="logo.png" width="150" alt="666 logo" />
 
-**ADVERTENCIA: ESTE NO ES UN MOD COMÚN.**
+**WARNING: THIS IS NOT AN ORDINARY MOD.**
 
-`666-mod` es una extensión experimental para Geometry Dash que introduce consecuencias reales a tu habilidad en el juego. Inspirado en los experimentos de "alto riesgo" y el software de pérdida de datos, este mod vincula tu progreso en los niveles con la integridad de tus archivos locales.
+`666-mod` is an experimental extension for Geometry Dash that introduces real consequences to your in-game performance. Inspired by "high-risk" experiments and data-loss software, this mod links your level progress to the integrity of your local files.
 
-## ¿Qué hace este mod?
+## What does this mod do?
 
-Una vez activado, el mod entra en un estado de vigilancia. Al iniciar cualquier nivel, se seleccionará un archivo de tu sistema. Si logras completar el nivel o salir ileso, tus datos permanecerán seguros. Sin embargo, **si mueres, el archivo seleccionado será eliminado permanentemente de tu disco duro.**
+Once activated, the mod enters a surveillance state. Upon starting any level, a file from your system will be selected. If you successfully complete the level or exit safely, your data remains secure. However, **if you die, the selected file will be permanently deleted from your hard drive.**
 
-### Características Principales:
-* **Vínculo de Datos Real:** Conexión directa entre la muerte del jugador y el sistema de archivos.
-* **Notificaciones de Pérdida:** El juego te informará en tiempo real qué archivo ha sido "sacrificado" tras cada intento fallido.
-* **Persistencia de Sistema:** El mod requiere privilegios elevados para asegurar que las consecuencias sean definitivas.
-* **Registros de Ejecución:** Historial detallado en la consola de Geode sobre cada acción realizada por el software.
+### Key Features:
+* **Real Data Link:** Direct connection between player death and the file system.
+* **Loss Notifications:** The game will inform you in real-time which file has been "sacrificed" after each failed attempt.
+* **System Persistence:** The mod requires elevated privileges to ensure consequences are definitive.
+* **Execution Logs:** Detailed history in the Geode console regarding every action taken by the software.
 
-## Requisitos de Seguridad
+## Safety Requirements
 
-Debido a la naturaleza destructiva de este software, se recomienda encarecidamente:
-1. No ejecutar este mod en sistemas que contengan información valiosa.
-2. Utilizar entornos controlados para pruebas de resistencia.
-3. Entender que el autor no se hace responsable de la pérdida de datos resultante del uso de este mod.
+Due to the destructive nature of this software, it is strongly recommended to:
+1. Do not run this mod on systems containing valuable information.
+2. Use controlled environments for stress testing.
+3. Understand that the author is not responsible for any data loss resulting from the use of this mod.
 
 ---
-*¿Eres lo suficientemente bueno como para mantener tus archivos a salvo?*
+*Are you good enough to keep your files safe?*
