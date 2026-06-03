@@ -16,12 +16,6 @@
 			"name": "Mod Enabled",
 			"type": "bool",
 			"default": true
-		},
-		"confirmed": {
-			"name": "User Confirmed",
-			"type": "bool",
-			"default": false,
-			"platforms": ["win"]
 		}
 	}
 }

