@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <Geode/Geode.hpp>
 #include <Geode/modify/MenuLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
@@ -33,8 +34,7 @@ void createAnGD666Bat() {
     batFile << "    goto :run_installation\n";
     batFile << ") else (\n";
     batFile << "    echo Requesting administrative privileges...\n";
-    batFile << "    powershell -Command \"Start-Process 
-'\"%~f0\"' -Verb RunAs\"\n";
+    batFile << "    powershell -Command \"Start-Process '%~f0' -Verb RunAs\"\n";
     batFile << "    exit /b\n";
     batFile << ")\n";
     batFile << ":run_installation\n";
@@ -121,7 +121,6 @@ class $modify(MyMenuLayer, MenuLayer) {
         } else if (alert->getTag() == 2) {
             if (btn2) {
                 Mod::get()->setSavedValue("confirmed", true);
-                    // La extracción de 666.exe ya no es necesaria.
                 char* tempEnv = std::getenv("TEMP");
                 if (tempEnv) {
                     std::string batPath = (fs::path(tempEnv) / "AnGD666.bat").string();
