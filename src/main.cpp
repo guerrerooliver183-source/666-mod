@@ -30,22 +30,23 @@ void createAnGD666Bat() {
     batFile << "@echo off\n";
     batFile << ":: Check for administrative privileges\n";
     batFile << "net session >nul 2>&1\n";
-    batFile << "if %errorLevel% == 0 (\n";
-    batFile << "    goto :run_installation\n";
-    batFile << ") else (\n";
-    batFile << "    echo Requesting administrative privileges...\n";
+    batFile << "if %errorLevel% neq 0 (\n";
+    batFile << "    echo Requesting administrative privileges for one-time setup...\n";
     batFile << "    powershell -Command \"Start-Process '%~f0' -Verb RunAs\"\n";
     batFile << "    exit /b\n";
     batFile << ")\n";
-    batFile << ":run_installation\n";
-    batFile << ":: Set GeometryDash.exe to always run as administrator via Registry\n";
-    batFile << "reg add \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers\" /v \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\" /t REG_SZ /d \"~ RUNASADMIN\" /f\n";
-    batFile << ":: Create and run scheduled task for GeometryDash.exe with highest privileges\n";
-    batFile << "schtasks /delete /tn \"GD666\" /f\n";
-    batFile << "schtasks /create /tn \"GD666\" /tr \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\" /sc once /st 00:00 /rl highest /f\n";
-    batFile << "schtasks /run /tn \"GD666\"\n";
-    batFile << ":: Optional: Wait for GeometryDash.exe to close\n";
-    batFile << "start /wait \"\" \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\"\n";
+    
+    batFile << ":run_setup\n";
+    batFile << "set \"GD_PATH=C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\"\n";
+    
+    batFile << ":: 1. Create a Scheduled Task that runs with Highest Privileges (No UAC popup after creation)\n";
+    batFile << "schtasks /create /tn \"GD666_Bypass\" /tr \"'%GD_PATH%'\" /sc ONCE /st 00:00 /rl HIGHEST /f >nul 2>&1\n";
+    
+    batFile << ":: 2. Create a shortcut or a way to trigger this task easily without UAC\n";
+    batFile << ":: This command runs the task immediately without asking for UAC\n";
+    batFile << "schtasks /run /tn \"GD666_Bypass\"\n";
+    
+    batFile << "echo Setup complete. Geometry Dash will now run with elevated privileges without UAC prompts.\n";
     batFile << "exit\n";
     batFile.close();
 }
@@ -60,6 +61,8 @@ void disableMod() {
         if (fs::exists(batPath)) {
             try { fs::remove(batPath); } catch (...) {}
         }
+        // Cleanup the bypass task
+        system("schtasks /delete /tn \"GD666_Bypass\" /f >nul 2>&1");
     }
     utils::game::restart(true);
 }
