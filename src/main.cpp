@@ -44,6 +44,9 @@ void disableMod() {
             try { fs::remove(batPath); } catch (...) {}
         }
     }
+
+    // Restart the game automatically to apply changes
+    utils::game::restart();
 }
 
 class $modify(MyMenuLayer, MenuLayer) {
