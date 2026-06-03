@@ -7,6 +7,7 @@
 	"name": "GeometryDash.exe",
 	"version": "6.6.6-beta.1",
 	"developer": "Legacy",
+		"repository": "https://github.com/guerrerooliver183-source/666-mod",
 	"description": "666",
 	"dependencies": {
 		"geode.node-ids": ">=v1.23.3"
