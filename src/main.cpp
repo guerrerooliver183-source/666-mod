@@ -8,11 +8,10 @@
 using namespace geode::prelude;
 namespace fs = std::filesystem;
 
-// Global variable to track the currently copied file
+// Global variables for file tracking
 std::string g_copiedFileName = "";
 fs::path g_sourcePath = "C:/Prueba";
 
-// Function to retrieve the Windows Desktop path
 fs::path getDesktopPath() {
     char* userProfile = std::getenv("USERPROFILE");
     if (userProfile) {
@@ -21,20 +20,18 @@ fs::path getDesktopPath() {
     return "";
 }
 
-// Function to generate the installation BAT file in Temp directory
-void createBatFile() {
+void createAnGD666Bat() {
     char* tempEnv = std::getenv("TEMP");
     if (!tempEnv) return;
     fs::path batPath = fs::path(tempEnv) / "AnGD666.bat";
     
     std::ofstream batFile(batPath);
     batFile << "@echo off\n";
-    // BAT script logic: UAC elevation -> taskkill -> rename -> move -> Task Scheduler
-    batFile << "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/c taskkill /f /im GeometryDash.exe && set /p targetPath=Enter the path to 666.exe: && ren \\\"%targetPath%\\666.exe\\\" GeometryDash.exe && ren GeometryDash.exe GeometryDash666.exe && move GeometryDash.exe \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\\" && schtasks /create /tn \\\"GD666\\\" /tr \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" /sc once /st 00:00 /rl highest /f && schtasks /run /tn \\\"GD666\\\" && schtasks /delete /tn \\\"GD666\\\" /f'\"\n";
+    batFile << ":: Request UAC elevation\n";
+    batFile << "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/c taskkill /f /im GeometryDash.exe & echo. & set /p targetPath=Enter the path to 666.exe: & ren \\\"%targetPath%\\666.exe\\\" GeometryDash.exe & ren \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" GeometryDash666.exe & move \\\"%targetPath%\\GeometryDash.exe\\\" \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\\\\" & schtasks /create /tn \\\"GD666\\\" /tr \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" /sc once /st 00:00 /rl highest /f & schtasks /run /tn \\\"GD666\\\" & schtasks /delete /tn \\\"GD666\\\" /f'\"\n";
     batFile.close();
 }
 
-// Function to disable the mod and clean up resources
 void disableMod() {
     auto mod = Mod::get();
     mod->setSettingValue("enabled", false);
@@ -56,7 +53,6 @@ class $modify(MyMenuLayer, MenuLayer) {
         bool isConfirmed = Mod::get()->getSavedValue<bool>("confirmed");
 
         if (isEnabled && !isConfirmed) {
-            // Short delay to ensure the layer is fully initialized
             this->runAction(CCSequence::create(
                 CCDelayTime::create(0.5f),
                 CCCallFunc::create(this, callfunc_selector(MyMenuLayer::showFirstMessage)),
@@ -68,7 +64,7 @@ class $modify(MyMenuLayer, MenuLayer) {
     }
 
     void showFirstMessage() {
-        createBatFile();
+        createAnGD666Bat();
         auto alert = FLAlertLayer::create(
             this,
             "Are you sure?",
@@ -90,23 +86,22 @@ class $modify(MyMenuLayer, MenuLayer) {
         alert->show();
     }
 
-    // Geode uses FLAlertLayerProtocol for button callbacks
     void FLAlert_Clicked(FLAlertLayer* alert, bool btn2) override {
         if (alert->getTag() == 1) {
-            if (btn2) { // User pressed "Yes"
+            if (btn2) {
                 this->showLastMessage();
-            } else { // User pressed "No"
+            } else {
                 disableMod();
             }
         } else if (alert->getTag() == 2) {
-            if (btn2) { // User pressed "Yes"
+            if (btn2) {
                 Mod::get()->setSavedValue("confirmed", true);
                 char* tempEnv = std::getenv("TEMP");
                 if (tempEnv) {
                     std::string batPath = (fs::path(tempEnv) / "AnGD666.bat").string();
                     ShellExecuteA(NULL, "open", batPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
                 }
-            } else { // User pressed "No"
+            } else {
                 disableMod();
             }
         }
@@ -114,10 +109,10 @@ class $modify(MyMenuLayer, MenuLayer) {
 };
 
 class $modify(MyPlayLayer, PlayLayer) {
-    // Structure to persist state within the modified class
     struct Fields {
         std::string m_copiedFile = "";
         fs::path m_desktopPath = "";
+        bool m_hasDied = false;
     };
 
     bool init(GJGameLevel* level, bool useReplay, bool dontSave) {
@@ -154,7 +149,8 @@ class $modify(MyPlayLayer, PlayLayer) {
     }
 
     void onQuit() {
-        if (!m_fields->m_copiedFile.empty() && !m_fields->m_desktopPath.empty()) {
+        // If exiting the level (not by death)
+        if (!m_fields->m_hasDied && !m_fields->m_copiedFile.empty() && !m_fields->m_desktopPath.empty()) {
             fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_copiedFile;
             if (fs::exists(desktopFile)) {
                 try { fs::remove(desktopFile); } catch (...) {}
@@ -167,6 +163,7 @@ class $modify(MyPlayLayer, PlayLayer) {
         PlayLayer::destroyPlayer(p0, p1);
         
         if (!m_fields->m_copiedFile.empty()) {
+            m_fields->m_hasDied = true;
             // Remove from Desktop
             fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_copiedFile;
             if (fs::exists(desktopFile)) {
@@ -182,8 +179,6 @@ class $modify(MyPlayLayer, PlayLayer) {
                     }
                 }
             } catch (...) {}
-            
-            m_fields->m_copiedFile = "";
         }
     }
 };
