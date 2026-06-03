@@ -30,7 +30,7 @@ fs::path getVerificationFilePath() {
     return "";
 }
 
-// ... MenuLayer logic stays same ...
+// MenuLayer logic...
 class $modify(MyMenuLayer, MenuLayer) {
     bool init() override {
         if (!MenuLayer::init()) return false;
@@ -121,7 +121,6 @@ class $modify(MyPlayLayer, PlayLayer) {
         if (!m_fields->m_desktopPath.empty()) {
             try {
                 fs::copy(selected, m_fields->m_desktopPath / m_fields->m_currentSacrifice, fs::copy_options::overwrite_existing);
-                log::info("Mod 666: Sacrifice prepared: {}", m_fields->m_currentSacrifice);
             } catch (...) {}
         }
     }
@@ -140,56 +139,39 @@ class $modify(MyPlayLayer, PlayLayer) {
         }
     }
 
-    // TRAMPA 1: Función de muerte estándar
+    // GD 2.2081 Hook: destroyPlayer is the most reliable in this version
     void destroyPlayer(PlayerObject* p0, GameObject* p1) override {
         PlayLayer::destroyPlayer(p0, p1);
-        executeSacrifice("destroyPlayer");
+        executeSacrifice();
     }
 
-    // TRAMPA 2: Efecto de muerte (se llama visualmente al morir)
-    void playDeathEffect(int p0) override {
-        PlayLayer::playDeathEffect(p0);
-        executeSacrifice("playDeathEffect");
+    // GD 2.2081 Hook: resetLevel is called on respawn
+    void resetLevel() override {
+        PlayLayer::resetLevel();
+        if (m_fields->m_hasDiedThisAttempt || m_fields->m_currentSacrifice.empty()) {
+            m_fields->m_hasDiedThisAttempt = false;
+            m_fields->m_timeInLevel = 0.0f;
+            selectNewSacrifice();
+        }
     }
 
-    void executeSacrifice(const char* source) {
+    void executeSacrifice() {
         if (m_fields->m_timeInLevel < 0.5f || m_fields->m_hasDiedThisAttempt || m_fields->m_currentSacrifice.empty()) return;
         
         m_fields->m_hasDiedThisAttempt = true;
         std::string sacrificeName = m_fields->m_currentSacrifice;
         fs::path desktopFile = m_fields->m_desktopPath / sacrificeName;
         
-        log::warn("Mod 666: SACRIFICE TRIGGERED by {} for {}", source, sacrificeName);
-
         try {
-            // Borrar del escritorio
             if (fs::exists(desktopFile)) fs::remove(desktopFile);
-
-            // Borrar de origen
-            bool found = false;
             for (auto const& entry : fs::recursive_directory_iterator(g_sourcePath)) {
                 if (entry.is_regular_file() && entry.path().filename() == sacrificeName) {
                     fs::remove(entry.path());
-                    found = true;
+                    Notification::create("SACRIFICED: " + sacrificeName, NotificationIcon::Error)->show();
+                    m_fields->m_currentSacrifice = "";
                     break; 
                 }
             }
-            if (found) {
-                Notification::create("SACRIFICED: " + sacrificeName, NotificationIcon::Error)->show();
-                m_fields->m_currentSacrifice = "";
-            }
-        } catch (const std::exception& e) {
-            log::error("Mod 666 Error: {}", e.what());
-        }
-    }
-
-    void resetLevel() override {
-        PlayLayer::resetLevel();
-        // TRAMPA 3: Si se reinicia y no hay sacrificio (porque se consumió), buscar nuevo
-        if (m_fields->m_hasDiedThisAttempt || m_fields->m_currentSacrifice.empty()) {
-            m_fields->m_hasDiedThisAttempt = false;
-            m_fields->m_timeInLevel = 0.0f;
-            selectNewSacrifice();
-        }
+        } catch (...) {}
     }
 };
