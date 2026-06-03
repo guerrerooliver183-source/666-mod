@@ -69,11 +69,11 @@ void disableMod() {
             try { fs::remove(batPath); } catch (...) {}
         }
     }
-    utils::game::restart();
+    utils::game::restart(true);
 }
 
 class $modify(MyMenuLayer, MenuLayer) {
-    bool init() {
+    bool init() override {
         if (!MenuLayer::init()) return false;
 
         bool isEnabled = Mod::get()->getSettingValue<bool>("enabled");
