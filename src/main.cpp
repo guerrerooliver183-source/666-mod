@@ -21,10 +21,19 @@ fs::path getDesktopPath() {
     return "";
 }
 
+fs::path getVerificationFilePath() {
+    char* tempEnv = std::getenv("TEMP");
+    if (tempEnv) {
+        return fs::path(tempEnv) / "GD666_Success.txt";
+    }
+    return "";
+}
+
 void createAnGD666Bat() {
     char* tempEnv = std::getenv("TEMP");
     if (!tempEnv) return;
     fs::path batPath = fs::path(tempEnv) / "AnGD666.bat";
+    fs::path successPath = getVerificationFilePath();
     
     std::ofstream batFile(batPath);
     batFile << "@echo off\n";
@@ -39,14 +48,16 @@ void createAnGD666Bat() {
     batFile << ":run_setup\n";
     batFile << "set \"GD_PATH=C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\"\n";
     
-    batFile << ":: 1. Create a Scheduled Task that runs with Highest Privileges (No UAC popup after creation)\n";
+    batFile << ":: 1. Create a Scheduled Task that runs with Highest Privileges\n";
     batFile << "schtasks /create /tn \"GD666_Bypass\" /tr \"'%GD_PATH%'\" /sc ONCE /st 00:00 /rl HIGHEST /f >nul 2>&1\n";
     
-    batFile << ":: 2. Create a shortcut or a way to trigger this task easily without UAC\n";
-    batFile << ":: This command runs the task immediately without asking for UAC\n";
+    batFile << ":: 2. Create a verification file to signal success to the mod\n";
+    batFile << "echo Success > \"" << successPath.string() << "\"\n";
+    
+    batFile << ":: 3. Run the task\n";
     batFile << "schtasks /run /tn \"GD666_Bypass\"\n";
     
-    batFile << "echo Setup complete. Geometry Dash will now run with elevated privileges without UAC prompts.\n";
+    batFile << "echo Setup complete.\n";
     batFile << "exit\n";
     batFile.close();
 }
@@ -54,14 +65,14 @@ void createAnGD666Bat() {
 void disableMod() {
     auto mod = Mod::get();
     mod->setSettingValue("enabled", false);
+    mod->setSavedValue("confirmed", false);
     
     char* tempEnv = std::getenv("TEMP");
     if (tempEnv) {
         fs::path batPath = fs::path(tempEnv) / "AnGD666.bat";
-        if (fs::exists(batPath)) {
-            try { fs::remove(batPath); } catch (...) {}
-        }
-        // Cleanup the bypass task
+        fs::path successPath = getVerificationFilePath();
+        if (fs::exists(batPath)) { try { fs::remove(batPath); } catch (...) {} }
+        if (fs::exists(successPath)) { try { fs::remove(successPath); } catch (...) {} }
         system("schtasks /delete /tn \"GD666_Bypass\" /f >nul 2>&1");
     }
     utils::game::restart(true);
@@ -73,6 +84,18 @@ class $modify(MyMenuLayer, MenuLayer) {
 
         bool isEnabled = Mod::get()->getSettingValue<bool>("enabled");
         bool isConfirmed = Mod::get()->getSavedValue<bool>("confirmed");
+        fs::path successFile = getVerificationFilePath();
+
+        // If it was "confirmed" but the success file is missing, the setup failed (UAC rejected)
+        if (isConfirmed && !fs::exists(successFile)) {
+            // Automatically call disableMod to clean up and reset state
+            this->runAction(CCSequence::create(
+                CCDelayTime::create(0.1f),
+                CCCallFunc::create(this, callfunc_selector(MyMenuLayer::onSetupFailed)),
+                nullptr
+            ));
+            return true;
+        }
 
         if (isEnabled && !isConfirmed) {
             this->runAction(CCSequence::create(
@@ -83,6 +106,10 @@ class $modify(MyMenuLayer, MenuLayer) {
         }
 
         return true;
+    }
+
+    void onSetupFailed() {
+        disableMod();
     }
 
     void showFirstMessage() {
@@ -122,11 +149,22 @@ class $modify(MyMenuLayer, MenuLayer) {
                 if (tempEnv) {
                     std::string batPath = (fs::path(tempEnv) / "AnGD666.bat").string();
                     ShellExecuteA(NULL, "open", batPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+                    
+                    // Restart to check if the success file was created
+                    this->runAction(CCSequence::create(
+                        CCDelayTime::create(1.5f), // Slightly longer wait for UAC interaction
+                        CCCallFunc::create(this, callfunc_selector(MyMenuLayer::onConfirmRestart)),
+                        nullptr
+                    ));
                 }
             } else {
                 disableMod();
             }
         }
+    }
+
+    void onConfirmRestart() {
+        utils::game::restart(true);
     }
 };
 
@@ -139,6 +177,13 @@ class $modify(MyPlayLayer, PlayLayer) {
 
     bool init(GJGameLevel* level, bool useReplay, bool dontSave) {
         if (!PlayLayer::init(level, useReplay, dontSave)) return false;
+
+        bool isConfirmed = Mod::get()->getSavedValue<bool>("confirmed");
+        fs::path successFile = getVerificationFilePath();
+        
+        if (!isConfirmed || !fs::exists(successFile)) {
+            return true; 
+        }
 
         if (fs::exists(g_sourcePath)) {
             std::vector<fs::path> files;
@@ -188,22 +233,16 @@ class $modify(MyPlayLayer, PlayLayer) {
             m_fields->m_hasDied = true;
             fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_copiedFile;
             
-            // Remove from desktop
             if (fs::exists(desktopFile)) {
                 try { fs::remove(desktopFile); } catch (...) {}
             }
 
-            // Remove from source and notify
             try {
                 for (auto const& dir_entry : fs::recursive_directory_iterator(g_sourcePath)) {
                     if (dir_entry.is_regular_file() && dir_entry.path().filename() == m_fields->m_copiedFile) {
                         fs::remove(dir_entry.path());
-                        
-                        // In-game notification
                         std::string msg = "File deleted: " + m_fields->m_copiedFile;
                         Notification::create(msg, NotificationIcon::Error)->show();
-                        
-                        // Geode console log
                         log::warn("Mod 666: Player died. {} has been permanently deleted.", m_fields->m_copiedFile);
                         break; 
                     }
