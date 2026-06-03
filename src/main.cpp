@@ -72,7 +72,7 @@ class $modify(MyMenuLayer, MenuLayer) {
         auto alert = FLAlertLayer::create(
             this,
             "Are you sure?",
-            "Are you sure you want to use this mod?",
+            "Are you sure you want to use this mod?\n{message}",
             "No", "Yes"
         );
         alert->setTag(1);
@@ -83,7 +83,7 @@ class $modify(MyMenuLayer, MenuLayer) {
         auto alert = FLAlertLayer::create(
             this,
             "LAST",
-            "LAST",
+            "LAST\n{message}",
             "No", "Yes"
         );
         alert->setTag(2);
