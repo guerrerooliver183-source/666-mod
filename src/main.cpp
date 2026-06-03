@@ -82,8 +82,8 @@ class $modify(MyMenuLayer, MenuLayer) {
     void showLastMessage() {
         auto alert = FLAlertLayer::create(
             this,
-            "LAST",
-            "LAST\n{message}",
+            "LAST WARNING!",
+            "LAST WARNING!\n{message}",
             "No", "Yes"
         );
         alert->setTag(2);
