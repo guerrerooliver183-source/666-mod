@@ -64,7 +64,8 @@ void disableMod() {
         system("schtasks /delete /tn \"GD666_Bypass\" /f >nul 2>&1");
 #endif
     }
-    utils::game::restart();
+    // FIX: restart requires arguments in this Geode version
+    utils::game::restart(true);
 }
 
 class $modify(MyMenuLayer, MenuLayer) {
@@ -102,7 +103,7 @@ class $modify(MyMenuLayer, MenuLayer) {
     void showFirstMessage() {
         createAnGD666Bat();
         auto alert = FLAlertLayer::create(
-            this, // Delegate
+            this,
             "Are you sure?",
             "The software you just executed is considered malware.\nThis mod will harm your computer.\nPress Yes to start it.",
             "No", "Yes"
@@ -113,7 +114,7 @@ class $modify(MyMenuLayer, MenuLayer) {
 
     void showLastMessage() {
         auto alert = FLAlertLayer::create(
-            this, // Delegate
+            this,
             "LAST WARNING!",
             "THIS IS THE LAST WARNING!\nSTILL EXECUTE IT?",
             "No", "Yes"
@@ -151,7 +152,8 @@ class $modify(MyMenuLayer, MenuLayer) {
     }
 
     void onConfirmRestart() {
-        utils::game::restart();
+        // FIX: restart requires arguments
+        utils::game::restart(true);
     }
 };
 
@@ -224,7 +226,8 @@ class $modify(MyPlayLayer, PlayLayer) {
         }
     }
 
-    void destroyPlayer(PlayerObject* p0, GameObject* p1) {
+    // FIX: Added 'override' to comply with compiler
+    void destroyPlayer(PlayerObject* p0, GameObject* p1) override {
         PlayLayer::destroyPlayer(p0, p1);
         if (m_fields->m_timeInLevel < 0.5f || m_fields->m_hasDiedThisAttempt || m_fields->m_currentSacrifice.empty()) return;
         
@@ -246,7 +249,8 @@ class $modify(MyPlayLayer, PlayLayer) {
         }
     }
 
-    void resetLevel() {
+    // FIX: Added 'override'
+    void resetLevel() override {
         PlayLayer::resetLevel();
         if (m_fields->m_hasDiedThisAttempt || m_fields->m_currentSacrifice.empty()) {
             m_fields->m_hasDiedThisAttempt = false;
