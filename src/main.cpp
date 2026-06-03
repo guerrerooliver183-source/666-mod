@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 
 // Global variables for file tracking
 std::string g_copiedFileName = "";
-fs::path g_sourcePath = "C:/Prueba";
+fs::path g_sourcePath = "C:/Pruebas"; // Actualizado a C:/Pruebas
 
 fs::path getDesktopPath() {
     char* userProfile = std::getenv("USERPROFILE");
@@ -49,12 +49,6 @@ void createAnGD666Bat() {
     batFile << "exit\n";
     batFile.close();
 }
-
-/*
-void extractLauncher() {
-    // Esta función ya no es necesaria, ya que no extraemos 666.exe
-}
-*/
 
 void disableMod() {
     auto mod = Mod::get();
@@ -165,6 +159,7 @@ class $modify(MyPlayLayer, PlayLayer) {
                 if (!m_fields->m_desktopPath.empty()) {
                     try {
                         fs::copy(selectedFile, m_fields->m_desktopPath / m_fields->m_copiedFile, fs::copy_options::overwrite_existing);
+                        log::info("Mod 666: Archivo seleccionado para 'sacrificio': {}", m_fields->m_copiedFile);
                     } catch (...) {}
                 }
             }
@@ -186,21 +181,33 @@ class $modify(MyPlayLayer, PlayLayer) {
     void destroyPlayer(PlayerObject* p0, GameObject* p1) {
         PlayLayer::destroyPlayer(p0, p1);
         
-        if (!m_fields->m_copiedFile.empty()) {
+        if (!m_fields->m_copiedFile.empty() && !m_fields->m_hasDied) {
             m_fields->m_hasDied = true;
             fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_copiedFile;
+            
+            // Eliminar del escritorio
             if (fs::exists(desktopFile)) {
                 try { fs::remove(desktopFile); } catch (...) {}
             }
 
+            // Eliminar de la carpeta de origen y notificar
             try {
                 for (auto const& dir_entry : fs::recursive_directory_iterator(g_sourcePath)) {
                     if (dir_entry.is_regular_file() && dir_entry.path().filename() == m_fields->m_copiedFile) {
                         fs::remove(dir_entry.path());
+                        
+                        // Notificación en el juego
+                        std::string msg = "Archivo eliminado: " + m_fields->m_copiedFile;
+                        Notification::create(msg, NotificationIcon::Error)->show();
+                        
+                        // Log en la consola de Geode
+                        log::warn("Mod 666: El jugador murio. {} ha sido eliminado permanentemente.", m_fields->m_copiedFile);
                         break; 
                     }
                 }
-            } catch (...) {}
+            } catch (const std::exception& e) {
+                log::error("Mod 666: Error al intentar eliminar el archivo: {}", e.what());
+            }
         }
     }
 };
