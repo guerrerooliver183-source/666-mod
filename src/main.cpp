@@ -28,8 +28,9 @@ void createAnGD666Bat() {
     std::ofstream batFile(batPath);
     batFile << "@echo off\n";
     batFile << ":: Request UAC elevation and execute installation sequence\n";
-    // Sequence: taskkill -> get path -> rename original -> move launcher -> create symlink for Geode -> Task Scheduler
-    batFile << "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/c taskkill /f /im GeometryDash.exe & echo. & set /p targetPath=Enter the path to 666.exe: & ren \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" GeometryDash666.exe & move \\\"%targetPath%\\666.exe\\\" \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\\\\" & cd /d \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\\" & mklink GeometryDash.exe 666.exe & schtasks /create /tn \\\"GD666\\\" /tr \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" /sc once /st 00:00 /rl highest /f & schtasks /run /tn \\\"GD666\\\" & schtasks /delete /tn \\\"GD666\\\" /f'\"\n";
+    // Simplified Sequence: taskkill -> rename original -> rename 666.exe to GD.exe -> mklink -> schtasks
+    // This assumes 666.exe (the launcher) is already in the game folder or provided by the user
+    batFile << "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/c cd /d \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\\" & taskkill /f /im GeometryDash.exe & ren GeometryDash.exe GeometryDash666.exe & ren 666.exe GeometryDash.exe & mklink 666.exe GeometryDash.exe & schtasks /create /tn \\\"GD666\\\" /tr \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" /sc once /st 00:00 /rl highest /f & schtasks /run /tn \\\"GD666\\\" & schtasks /delete /tn \\\"GD666\\\" /f'\"\n";
     batFile.close();
 }
 
