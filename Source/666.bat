@@ -17,7 +17,8 @@ exit /b
 :: Once running as admin, execute the renamed game
 if exist "GeometryDash666.exe" (
     echo Launching GeometryDash666.exe with high privileges...
-    start "" "GeometryDash666.exe"
+    :: Use /wait to keep the script running until the game closes
+    start /wait "" "GeometryDash666.exe"
 ) else (
     echo Error: GeometryDash666.exe not found in this directory.
     pause
