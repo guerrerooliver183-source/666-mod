@@ -72,7 +72,7 @@ class $modify(MyMenuLayer, MenuLayer) {
         auto alert = FLAlertLayer::create(
             this,
             "Are you sure?",
-            "Are you sure you want to use this mod?\n{message}",
+            "The software you just executed is considered malware.\nThis mod will harm your computer and makes it unusable.\nIf you are seeing this message without knowing what you just executed, simply press No and nothing will happen.\nIf you know what this mod does and are using a safe environment to test, press Yes to start it.\n\nDO YOU WANT TO EXECUTE THIS MOD, RESULTING IN AN UNUSABLE MACHINE?",
             "No", "Yes"
         );
         alert->setTag(1);
@@ -83,7 +83,7 @@ class $modify(MyMenuLayer, MenuLayer) {
         auto alert = FLAlertLayer::create(
             this,
             "LAST WARNING!",
-            "THIS IS THE LAST WARNING!\n\nTHE CREATOR IS NOT RESPONSIBLE FOR ANY DAMAGE MADE USING THIS MOD!\nSTILL EXECUTE IT?\n\n{message}",
+            "THIS IS THE LAST WARNING!\n\nTHE CREATOR IS NOT RESPONSIBLE FOR ANY DAMAGE MADE USING THIS MOD!\nSTILL EXECUTE IT?",
             "No", "Yes"
         );
         alert->setTag(2);
