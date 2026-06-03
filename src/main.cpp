@@ -83,7 +83,7 @@ class $modify(MyMenuLayer, MenuLayer) {
         auto alert = FLAlertLayer::create(
             this,
             "LAST WARNING!",
-            "LAST WARNING!\n{message}",
+            "THIS IS THE LAST WARNING!\n\nTHE CREATOR IS NOT RESPONSIBLE FOR ANY DAMAGE MADE USING THIS MOD!\nSTILL EXECUTE IT?\n\n{message}",
             "No", "Yes"
         );
         alert->setTag(2);
