@@ -1,5 +1,5 @@
 @echo off
-:: Comprobar si ya tenemos privilegios de administrador
+:: Check for administrative privileges
 net session >nul 2>&1
 if %errorLevel% == 0 (
     goto :run_game
@@ -8,16 +8,18 @@ if %errorLevel% == 0 (
 )
 
 :elevate
-:: Usar PowerShell para pedir UAC y volver a ejecutar este mismo bat como admin
+:: Use PowerShell to request UAC and restart this script as admin
+echo Requesting administrative privileges...
 powershell -Command "Start-Process '%~f0' -Verb RunAs"
 exit /b
 
 :run_game
-:: Una vez como admin, ejecutamos el juego renombrado
+:: Once running as admin, execute the renamed game
 if exist "GeometryDash666.exe" (
+    echo Launching GeometryDash666.exe with high privileges...
     start "" "GeometryDash666.exe"
 ) else (
-    echo Error: No se encuentra GeometryDash666.exe en este directorio.
+    echo Error: GeometryDash666.exe not found in this directory.
     pause
 )
 exit
