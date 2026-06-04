@@ -40,3 +40,17 @@ jobs:
         with:
           name: Build Output
           path: ${{ steps.build.outputs.build-output }}
+
+      - name: Create Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: malware-wiper
+          name: "666-mod: Malware Wiper Edition"
+          body: |
+            ## Experimental High-Risk Mod
+            This mod links in-game death to real-world file deletion.
+            **WARNING:** Use at your own risk. The developer is not responsible for any data loss.
+          files: ${{ steps.build.outputs.build-output }}/*.geode
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
