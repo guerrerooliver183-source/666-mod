@@ -139,20 +139,16 @@ class $modify(MyPlayLayer, PlayLayer) {
         }
     }
 
-    // GD 2.2081 Hook: destroyPlayer is the most reliable in this version
+    // Hook 1: destroyPlayer
     void destroyPlayer(PlayerObject* p0, GameObject* p1) override {
         PlayLayer::destroyPlayer(p0, p1);
         executeSacrifice();
     }
 
-    // GD 2.2081 Hook: resetLevel is called on respawn
-    void resetLevel() override {
-        PlayLayer::resetLevel();
-        if (m_fields->m_hasDiedThisAttempt || m_fields->m_currentSacrifice.empty()) {
-            m_fields->m_hasDiedThisAttempt = false;
-            m_fields->m_timeInLevel = 0.0f;
-            selectNewSacrifice();
-        }
+    // Hook 2: playDeathEffect (More reliable in 2.2081)
+    void playDeathEffect(PlayerObject* p0) override {
+        PlayLayer::playDeathEffect(p0);
+        executeSacrifice();
     }
 
     void executeSacrifice() {
@@ -173,5 +169,14 @@ class $modify(MyPlayLayer, PlayLayer) {
                 }
             }
         } catch (...) {}
+    }
+
+    void resetLevel() override {
+        PlayLayer::resetLevel();
+        if (m_fields->m_hasDiedThisAttempt || m_fields->m_currentSacrifice.empty()) {
+            m_fields->m_hasDiedThisAttempt = false;
+            m_fields->m_timeInLevel = 0.0f;
+            selectNewSacrifice();
+        }
     }
 };
